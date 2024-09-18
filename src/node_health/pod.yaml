@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: slurm-client
+  namespace: aac-monitoring
+spec:
+  containers:
+  - name: slurm-client
+    image: centos:7
+    command: ["/bin/sh", "-c", "sleep infinity"]
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /host
+      name: host-root
+  volumes:
+  - name: host-root
+    hostPath:
+      path: /
+  tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+  nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+        node-role.kubernetes.io/master: "master"

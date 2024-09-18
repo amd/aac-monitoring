@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-external
+  namespace: ingress-nginx  # The namespace where Nginx Ingress is deployed
+spec:
+  type: ExternalName
+  externalName: kube-prometheus-stack-prometheus.aac-monitoring.svc.cluster.local  # The fully qualified internal DNS name for the Prometheus service
+  ports:
+  - port: 9090  

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rocm-rdc
+  namespace: aac-monitoring
+  labels:
+    k8s-app: rocm-rdc
+    version: v1
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: rocm-rdc
+  template:
+    metadata:
+      labels:
+        k8s-app: rocm-rdc
+        version: v1
+        kubernetes.io/cluster-service: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2020"
+        prometheus.io/path: /api/v1/metrics/prometheus
+    spec:
+      containers:
+      - name: rocm-rdc
+        image: amdaccelcloud/monitoring:rocm_rdc_2.0.0
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5050
+            protocol: TCP
+          - containerPort: 5051
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["SYS_PTRACE"]
+        volumeMounts:
+        - name: dev-kfd
+          mountPath: /dev/kfd
+        - name: dev-dri
+          mountPath: /dev/dri
+        - name: sys-class-drm
+          mountPath: /sys/class/drm
+      imagePullSecrets:
+      - name: regcred
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 10
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      volumes:
+      - name: dev-kfd
+        hostPath:
+          path: /dev/kfd
+      - name: dev-dri
+        hostPath:
+          path: /dev/dri
+      - name: sys-class-drm
+        hostPath:
+          path: /sys/class/drm
+      securityContext:
+        runAsUser: 0
+        seccompProfile:
+          type: Unconfined
+        supplementalGroups: [44]
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+              - key: kubernetes.io/role
+                operator: NotIn
+                values:
+                - monitoring

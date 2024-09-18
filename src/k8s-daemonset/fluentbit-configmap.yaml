@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: aac-monitoring
+  labels:
+    k8s-app: fluent-bit
+data:
+  # Configuration files: server, input, filters and output
+  # ======================================================
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush                     1
+        Log_Level                 debug
+        Daemon                    off
+        HTTP_Server               On
+        HTTP_Listen               0.0.0.0
+        HTTP_Port                 2020
+        Storage.Path              /var/log/flb-storage/
+        Storage.Sync              normal
+        Storage.Checksum          off
+        Storage.Max_Chunks_Up     128
+        Storage.Backlog.Mem_Limit 5M
+
+    @INCLUDE input.conf
+    @INCLUDE output.conf
+  input.conf: |
+    [INPUT]
+        Name              prometheus_scrape
+        Tag               rocm_rdc
+        Host              0.0.0.0
+        Port              5050
+        metrics_path      /
+        scrape_interval   10s
+        Storage.Type      filesystem
+
+    [INPUT]
+        Name              prometheus_scrape
+        Tag               node_health
+        Host              0.0.0.0
+        Port              5051
+        metrics_path      /node_health
+        scrape_interval   10s
+        Storage.Type      filesystem
+
+    [INPUT]
+        Name              node_exporter_metrics
+        Tag               node_metrics
+        path.procfs       /host/proc
+        path.sysfs        /host/sys
+        scrape_interval   5
+        Storage.Type      filesystem
+
+        # ----------------- Filter no supported for Prometheus Scrape Metrics Input plugin ------------- #
+        #[FILTER]
+        #Name              lua
+        #Match             rocm_rdc
+        #Script            /fluent-bit/etc/lua/filter_xgmi.lua
+        #Call              add_xgmi_custom_label
+
+  output.conf: |
+    [OUTPUT]
+        Name                 prometheus_remote_write
+        Match                rocm_rdc
+        Host                 ${PROMETHEUS_HOST}
+        Port                 ${PROMETHEUS_PORT}
+        Uri                  /api/v1/write
+        Tls                  off
+        Log_response_payload on
+        Add_label            job rdc
+        Add_label            instance ${NODE_NAME}:5000
+        Add_label            short_instance ${NODE_NAME}
+        Storage.Total_Limit_Size    10G
+
+    [OUTPUT]
+        Name                 prometheus_remote_write
+        Match                node_health
+        Host                 ${PROMETHEUS_HOST}
+        Port                 ${PROMETHEUS_PORT}
+        Uri                  /api/v1/write
+        Tls                  off
+        Log_response_payload on
+        Add_label            job node_health
+        #Add_label            short_instance ${NODE_NAME}
+        Storage.Total_Limit_Size    5G
+
+    [OUTPUT]
+        Name                 prometheus_remote_write
+        Match                node_metrics
+        Host                 ${PROMETHEUS_HOST}
+        Port                 ${PROMETHEUS_PORT}
+        Uri                  /api/v1/write
+        Tls                  off
+        Log_response_payload on
+        Add_label            container ${CONTAINER_NAME}
+        Add_label            endpoint http-metrics
+        Add_label            instance ${NODE_IP}:9100
+        Add_label            job node-exporter
+        Add_label            namespace ${NAMESPACE}
+        Add_label            pod ${POD_NAME}
+        Storage.Total_Limit_Size    5G
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-filter-config
+  namespace: aac-monitoring
+  labels:
+    k8s-app: fluent-bit
+data:
+  filter_xgmi.lua: |
+    function add_xgmi_custom_label(tag, timestamp, record)
+        new_record = record
+        for key, value in pairs(record) do
+            if string.match(key, "^xgmi_%d+_read$") then
+                gpu_index = record["gpu_index"]
+                node_name = os.getenv("NODE_NAME")
+                new_record[key .. "_custom_label"] = key .. "-" .. gpu_index .. "-" .. node_name
+                print("key:" .. key)
+                print("gpu_index:" .. gpu_index)
+                print("node_name:" .. node_name)
+            end
+        end
+        return 2, timestamp, new_record
+    end

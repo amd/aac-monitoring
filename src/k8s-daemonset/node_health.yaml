@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-health
+  namespace: aac-monitoring
+  labels:
+    k8s-app: node-health
+    version: v1
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: node-health
+  template:
+    metadata:
+      labels:
+        k8s-app: node-health
+        version: v1
+        kubernetes.io/cluster-service: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2020"
+        prometheus.io/path: /api/v1/metrics/prometheus
+    spec:
+      containers:
+      - name: node-health
+        image: amdaccelcloud/monitoring:node_health_1.0.0
+        imagePullPolicy: Always
+#       command: ["/bin/sh", "-c", "chroot /host /path/to/your-script.sh && sleep infinity"]
+        ports:
+          - containerPort: 5051
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /host
+          name: host-root
+      volumes:
+      - name: host-root
+        hostPath:
+          path: /
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 10
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      # runs the process in the host's namespaces instead of a separate set of namespaces for the contained process
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: regcred
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+        node-role.kubernetes.io/master: "master"

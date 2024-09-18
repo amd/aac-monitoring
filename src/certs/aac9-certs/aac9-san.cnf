@@ -1,0 +1,21 @@
+[ req ]
+default_bits       = 2048
+prompt             = no
+default_md         = sha512
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+
+[ req_distinguished_name ]
+C  = US
+ST = California
+L  = Santa Clara
+O  = Advanced Micro Devices
+OU = IT
+CN = aac9.amd.com
+emailAddress = dl.dcgpu.aacteam@amd.com
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1   = aac9.amd.com
