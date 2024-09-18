@@ -93,7 +93,7 @@ COPY rdc_fields_list /usr/src/app/rdc_fields_list
 RUN series_lower=$(echo $series | tr '[:upper:]' '[:lower:]'); \
   if [ "$series_lower" = "mi300" ]; then \
   echo "Appending additional fields for MI300" && \
-  echo "RDC_FI_PCIE_BANDWIDTH\nRDC_FI_XGMI_0_READ_KB\nRDC_FI_XGMI_1_READ_KB\nRDC_FI_XGMI_2_READ_KB\nRDC_FI_XGMI_3_READ_KB\nRDC_FI_XGMI_4_READ_KB\nRDC_FI_XGMI_5_READ_KB\nRDC_FI_XGMI_6_READ_KB\nRDC_FI_XGMI_7_READ_KB\nRDC_FI_XGMI_0_WRITE_KB\nRDC_FI_XGMI_1_WRITE_KB\nRDC_FI_XGMI_2_WRITE_KB\nRDC_FI_XGMI_3_WRITE_KB\nRDC_FI_XGMI_4_WRITE_KB\nRDC_FI_XGMI_5_WRITE_KB\nRDC_FI_XGMI_6_WRITE_KB\nRDC_FI_XGMI_7_WRITE_KB" >> /usr/src/app/rdc_fields_list; \
+  echo "\nRDC_FI_PCIE_BANDWIDTH\nRDC_FI_XGMI_0_READ_KB\nRDC_FI_XGMI_1_READ_KB\nRDC_FI_XGMI_2_READ_KB\nRDC_FI_XGMI_3_READ_KB\nRDC_FI_XGMI_4_READ_KB\nRDC_FI_XGMI_5_READ_KB\nRDC_FI_XGMI_6_READ_KB\nRDC_FI_XGMI_7_READ_KB\nRDC_FI_XGMI_0_WRITE_KB\nRDC_FI_XGMI_1_WRITE_KB\nRDC_FI_XGMI_2_WRITE_KB\nRDC_FI_XGMI_3_WRITE_KB\nRDC_FI_XGMI_4_WRITE_KB\nRDC_FI_XGMI_5_WRITE_KB\nRDC_FI_XGMI_6_WRITE_KB\nRDC_FI_XGMI_7_WRITE_KB" >> /usr/src/app/rdc_fields_list; \
   else \
   echo "No additional fields appended"; \
   fi

@@ -114,7 +114,7 @@ execute_deployment(){
   fi
 
   echo "Waiting for nginx-ingress-controller pod to come up ...."
-  sleep 10
+  sleep 30
   if [ "$SITE_NAME" = "aac4.amd.com" ]; then
     kubectl apply -f ../nginx-ingress/charlotte/ingress.yaml
   else
@@ -134,7 +134,7 @@ execute_deployment(){
         sed -i 's|image: .*|image: amdaccelcloud/monitoring:rocm_rdc_2.0.0|g' ../k8s-daemonset/rocm-rdc-daemonset.yaml
       fi
     fi
-  done < "../rdc/sites.ini"
+  done < "./sites.ini"
   echo "Starting deployment of rocm-rdc, fluent-bit and node-health stack"
   kubectl apply -f  ../k8s-daemonset
 
@@ -146,6 +146,7 @@ execute_deployment(){
 
 execute_undeployment(){
   validate_helm
+  kubectl delete -f  ../k8s-daemonset
   # Undeploy kube-prometheus-stack
   if helm ls -n ${PROMETHEUS_NAMESPACE} | grep -q 'deployed'; then
     helm uninstall ${PROMETHEUS_INSTALLER} -n ${PROMETHEUS_NAMESPACE}
