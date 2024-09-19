@@ -1,9 +1,7 @@
-# --------------- AAC Monitoring Framework Deployment -------------
+# AMD Accelerator Cloud (AAC) Monitoring Framework
+The AAC monitoring framework is an easy-to-use framework to monitor data center environment with clusters of AMD GPUs. The framework collects GPU telemetry data which can be visualized in dashboards to monitor the health, utilization and several key metrics of GPU nodes. The AAC Monitoring Framework leverages the capabilities of [ROCm Data Center Tool](https://rocm.docs.amd.com/projects/rdc) to address key infrastructure challenges in managing AMD GPUs within cluster and datacenter environments.
 
-The AAC Monitoring Framework leverages the capabilities of the ***ROCm Data Center (RDC) Tool*** to address key 
-infrastructure challenges in managing AMD GPUs within cluster and datacenter environments by collecting GPU telemetry data.
-
-***Framework Components:***
+***Key Components:***
 ```
   1. Kube-Prometheus-Stack
   2. Nginx-Ingress-Controller
