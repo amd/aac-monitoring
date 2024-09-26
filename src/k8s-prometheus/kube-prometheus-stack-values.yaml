@@ -3695,7 +3695,7 @@ prometheus:
     # Using PersistentVolumeClaim    
       volumeClaimTemplate:
         spec:
-          storageClassName: "cirrascale-nfs"
+          storageClassName: "<storage_class_name>"
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:

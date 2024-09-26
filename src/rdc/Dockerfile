@@ -110,7 +110,6 @@ RUN sed -i "s/field_id = rdc.get_field_id_from_name(f)/field_id = rdc.get_field_
 COPY RdcReader.py /opt/rocm/libexec/rdc/python_binding
 COPY rdc_prometheus.py /opt/rocm/libexec/rdc/python_binding
 
-
 USER rocm-user
 WORKDIR /home/rocm-user
 ENV ROCM_PATH=/opt/rocm

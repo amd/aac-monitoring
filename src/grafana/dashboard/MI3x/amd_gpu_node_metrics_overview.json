@@ -105,6 +105,7 @@
               "type": "value"
             }
           ],
+          "noValue": "Not Supported",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -138,7 +139,10 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 16,
+          "valueSize": 16
+        },
         "textMode": "value",
         "wideLayout": true
       },
@@ -149,10 +153,12 @@
             "type": "prometheus",
             "uid": "fdon7u73ww2dcf"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "nvidia_smi_pstate{uuid=\"$gpu\"}",
+          "expr": "",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "__auto",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -702,7 +708,7 @@
             "uid": "fdon7u73ww2dcf"
           },
           "exemplar": true,
-          "expr": "nvidia_smi_gpu_info{uuid=\"$gpu\"}",
+          "expr": "",
           "instant": true,
           "interval": "",
           "legendFormat": "{{vbios_version}}",
@@ -717,14 +723,14 @@
         "type": "prometheus",
         "uid": "fdon7u73ww2dcf"
       },
-      "description": "Average PCIe bandwidth or transfer rate using  amd-smi metric --pcie in gigabytes/sec. amd-smi reports  instantaneous, bidirectional bandwidth, measured in small intervals.\n\nScale-out network bandwidth 8 PCIe® Gen 5 x16 (128 GB/s) per GPU.\n\nInformation about factors that are reducing the frequency of clocks. If all throttle reasons are returned as \"Not Active\" it means that clocks are running as high as possible.",
+      "description": "Average PCIe bandwidth or transfer rate using  amd-smi metric --pcie in gigabytes/sec. amd-smi reports  instantaneous, bidirectional bandwidth, measured in small intervals.\n\nScale-out network bandwidth 8 PCIe® Gen 5 x16 (128 GB/s) per GPU.\n\n\"8 PCIe® Gen 5 or Gen4 x16 (128 GB/s) per GPU\" indicates that each AMD GPU can support up to 8 PCIe Gen 5 or Gen 4 slots, with each slot having 16 lanes total data transfer bandwidth per GPU. PCIe Gen 5 x16 can achieve up to 16 GB/s of data transfer per direction (32 GB/s bidirectional). With 8 such connections, the total bandwidth is 8 x 16 GB/s = 128 GB/s.\n\nInformation about factors that are reducing the frequency of clocks. If all throttle reasons are returned as \"Not Active\" it means that clocks are running as high as possible.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "continuous-GrYlRd"
           },
           "mappings": [],
-          "noValue": "Throttle Reasons - Not Active",
+          "noValue": "Throttle Reasons - Not Active .... Metrics not supported",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1630,8 +1636,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "#EAB839",
@@ -1738,8 +1743,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1843,8 +1847,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -1946,8 +1949,7 @@
             "mode": "percentage",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -2185,8 +2187,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -2287,8 +2288,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -2419,6 +2419,6 @@
   "timezone": "",
   "title": "AMD GPU Node Metrics Overview",
   "uid": "ddon80y1vdeyod",
-  "version": 94,
+  "version": 102,
   "weekStart": ""
 }

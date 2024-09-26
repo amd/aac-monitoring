@@ -24,9 +24,8 @@ spec:
     spec:
       containers:
       - name: node-health
-        image: amdaccelcloud/monitoring:node_health_1.0.0
+        image: <repo/image:tag>
         imagePullPolicy: Always
-#       command: ["/bin/sh", "-c", "chroot /host /path/to/your-script.sh && sleep infinity"]
         ports:
           - containerPort: 5051
             protocol: TCP

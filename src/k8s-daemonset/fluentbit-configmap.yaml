@@ -51,7 +51,7 @@ data:
         scrape_interval   5
         Storage.Type      filesystem
 
-        # ----------------- Filter no supported for Prometheus Scrape Metrics Input plugin ------------- #
+        # ----------------- Filter not supported for Prometheus Scrape Metrics Input plugin ------------- #
         #[FILTER]
         #Name              lua
         #Match             rocm_rdc
