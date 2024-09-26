@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: rocm-rdc
-        image: amdaccelcloud/monitoring:rocm_rdc_2.0.0
+        image: <repo/image:tag>
         imagePullPolicy: Always
         ports:
           - containerPort: 5050

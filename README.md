@@ -5,8 +5,8 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 ```
   1. Kube-Prometheus-Stack
   2. Nginx-Ingress-Controller
-  3. Nginx Reverse Proxy Server / Load Balancer
-  4. Grafana
+  3. Grafana
+  4. Nginx Reverse Proxy Server and Load Balancer
   5. Fluent-bit
   6. RoCM/RDC
 ```
@@ -23,71 +23,77 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 
 > [!IMPORTANT]
 > - Prometheus and Grafana communicate over TLS. We have not enabled mutual TLS.
-> - Site specific SSL certificates are placed under the ***certs*** folder.
+> - SSL certificates needs to be placed under ***monitoring/src/certs*** folder.
 > - Certs installation location:
->     - Nginx Ingress Controller TLS enabled through `kubernetes tls secret creation`
->     - Grafana SSL certs needs to be configured in `/etc/grafana/grafana.ini`.
->     - NGINX SSL certs needs to be configured in `/etc/nginx/sites-avaliable/<site_name>` and to be placed in `/etc/ssl/certs` folder.
->     - Prometheus listens over http behind K8s ingress controller.
+>     - Nginx Ingress Controller TLS enabled through `kubernetes tls secret creation` using ***certs*** folder.
+>     - If TLS requires to be enabled for Grafana, SSL certs needs to be configured in `/etc/grafana/grafana.ini`. ***[optional]***
+>     - Nginx Proxy Server acts as reverse proxy for Grafana and SSL certs needs to be configured in `/etc/nginx/sites-avaliable/<site_name>` configuration file and to be placed under ***`/etc/ssl/certs`*** folder.
+>     - Prometheus listens over http behind K8s Nginx ingress controller.
+>     - Grafana listens over http behind NGINX reverse proxy server.
 > - Do not create additional k8s resources, here is the list of [improvements](#automation-improvements) have been incorporated through deployment script automation.
 
 ### Deployment
 ***Build rocm-rdc and node-health images***
+  * Complete all the prerequisites steps mentioned above.
   * Clone the repository.
-  * Navigate to the `monitoring/rdc` folder.
+  * Navigate to the `monitoring/src/rdc` folder.
   * List of supported RoCM/rdc GPU telemetry fields [here](#gpu-telemetry-fields), edit __rdc_fields_list__ file for additional fields if required.
   * Execute the following command based on the HW information to build the docker image, if required
       
   ```
-  docker build -t amdaccelcloud/monitoring:rocm_rdc_3.0.0 --build-arg series=MI300 .
-  docker push amdaccelcloud/monitoring:rocm_rdc_3.0.0
+  docker login -u <username> -p <password>
+  docker build -t <repo>:rocm_rdc_3.0.0 --build-arg series=MI300 .
+  docker push <repo>:rocm_rdc_3.0.0
   ```
 > [!NOTE]
-> - Make sure, you have executed ***`docker login -u <username> -p <password>`*** command prior to push the image to __amdaccelcloud/monitoring__ repository
-> - Currently supported series argument for docker build: `MI210` | `MI250` | `MI300`
-> - Maintain the recommended build tag version; for __MI3X__: `amdaccelcloud/monitoring:rocm_rdc_3.0.0` and for __MI2X__: `amdaccelcloud/monitoring:rocm_rdc_2.0.0`
-  * Navigate to the `monitoring/node_health` folder.
+> - Supported series argument for docker build: `MI210` | `MI250` | `MI300`
+> - Recommended build tag version; for __MI3x__: `<repo>:rocm_rdc_3.0.0` and for __MI2x__: `<repo>:rocm_rdc_2.0.0`
+> - GPU Telemetry Fields getting populated dynamically based on the GPU hardware information - incorporated in DockerFile.
+  * Navigate to the `monitoring/src/node_health` folder.
   * Execute the following command based to build the docker image, if required
 
   ```
-  docker build -t amdaccelcloud/monitoring:node_health_1.0.0 .
-  docker push amdaccelcloud/monitoring:node_health_1.0.0
+  docker build -t <repo>:node_health_1.0.0 .
+  docker push <repo>:node_health_1.0.0
   ```
 ***Deploy `Kube-Prometheus-Stack` and `Nginx-Ingress-Controller` with `fluentbit` `RoCM/rdc` and `node health` as kubernetes daemonset***
 > [!WARNING]
-> The deployment script execution will fail if the followings prerequisites are not fulfilled.
-> - Add label `kubernetes.io/role=monitoring` to edge node.
+> The script execution will fail if the followings prerequisites are not fulfilled.
+> - Add label `kubernetes.io/role=monitoring` to management or edge node, where monitoring stack needs to be deployed.
 > ```
 > kubectl label nodes <node_name> kubernetes.io/role=monitoring
 > ```
-> - Get site specific SSL Certificate from [amd.service-now](https://amd.service-now.com/sp?id=ticket&table=sc_req_item&sys_id=6a6938ed1b941294df3c62c4bd4bcbfe&view=sp) by providing __csr__.
+> - Generate TLS/SSL Certificate for ***kubernetes nginx ingress controller***.
 > ```
-> openssl req -new -nodes -newkey rsa:2048 -keyout aac4.key -out aac4.amd.com.csr -config aac4-san.cnf
+> #== generate a self-signed certificate ==#
+> openssl req -new -newkey rsa:2048 -nodes -keyout mydomain.key -out mydomain.csr -subj "/C=<CountryName>/ST=<StateOrProvinceName>/L=<Locality>/O=<Organization>/OU=<OrganizationalUnit>/CN=<CommonName>"
+> openssl x509 -req -days 365 -in mydomain.csr -signkey mydomain.key -out mydomain.crt
 > ```
-> - Create site specific certs folder under __certs__ directory and copy the TLS private key and cerificate files
-> - Ensure NFS Server connectivity is established  from the edge node, as volumes are claimed through PVC for Prometheus TSDB.
+> - Copy the generated TLS private key and cerificate file under  __certs__ directory.
+> - If using NFS as storage class driver for kubernetes, ensure NFS Server connectivity is established from the edge or management node, as volumes are claimed through PVC for Prometheus TSDB.
 
 ***Execute the deployment script:***
-
+* Navigate to the `monitoring/src/helm` folder and execute the following command
 ```
-./installer.sh --site <Site_Name> --deploy|--undeploy`
+./installer.sh -s <site_name> -i <repo/image_tag> -u <prometheus_username> -i <prometheus_password> --deploy|--undeploy`
 ```
   
 > [!CAUTION]
-> If script execution fails, uninstall the complete monitoring stack by executing the same script with `--undeploy` flag prior to reinstall.
+> If script execution fails, uninstall the complete monitoring stack by executing the same script with `--undeploy` flag prior to reinstall. **Namespaces** won't be deleted. For more information about command usage: ***./installer.sh -h***
 
-***Deploy Grafana in AWS EC2 Instance***
-  * Navigate to the monitoring/grafana folder.
-  * Run the shell script: `./install_grafana.sh`
-  * Upload dashboard JSON content from the monitoring/grafana/dashboard folder to the Grafana UI.
+***Deploy Grafana***
+  * Navigate to the `monitoring/src/grafana` folder.
+  * Generate TLS certificate as mentioned [above](#deployment) for Nginx reverse proxy server and keep the cert and private key under /etc/ssl/certs directory as nginx.crt and nginx.key.
+  * Run the shell script: `./setup.sh --install|uninstall`
+  * Upload dashboard JSON content from the  `monitoring/src/grafana/dashboard/<MI2|3x>` folder based on the GPU hardware information to the Grafana UI.
 
 ### Automation Improvements
-  * RoCM/rdc binary updated to latest stable [build](http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/14776/) version __6.3__
-  * Docker registry secret, Prometheus basic auth and NGINX Ingress Controller site specific TLS certificates creation.
+  * RoCM/rdc binary updated to latest stable version __6.2.1__
+  * Kube-Prometheus-Stack and Nginx Ingress controller updated to version __v0.76.1__ and __1.11.2__
+  * Docker registry, Prometheus basic auth, NGINX Ingress Controller and Reverse Proxy server TLS secret creation.
   * Docker build args has been enabled to provide GPU hardware series information.
-  * GPU Telemetry Fields getting populated dynamically based on the GPU hardware information - incorporated in DockerFile.
-  * Container image tag updated based on the GPU hardware information based on __site mapping__ file.
-  * Update of Storage Class Driver information under Prometheus Storage Spec.
+  * GPU Telemetry Fields getting populated dynamically based on the GPU hardware information.
+  * Update of Storage Class Driver information for Prometheus Storage Spec.
 
 ### GPU Telemetry Fields
   ***MI200 | MI210 | MI250:***
@@ -98,7 +104,7 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
   `RDC_FI_PCIE_BANDWIDTH` `RDC_FI_XGMI_[0-7]_READ_KB` `RDC_FI_XGMI_[0-7]_WRITE_KB`
 
 > [!TIP]
-> To enhance the `aac-monitoring` stack functionlity fork the repo or create a feature branch.
+> To enhance the `aac-monitoring` stack functionlity, fork the repo or create a feature branch and raise bug if functionality fails or broken.
 > Verify the deployment by using the following commands.
 > ```
 > kubectl get all -n aac-monitoring
@@ -107,7 +113,7 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 > 
 > kubectl exec -it <rocm_rdc_daemonset_pod> -n aac-monitoring bash
 > - supervisortcl status [all the processes should be RUNNING state]
-> - curl localhost:5050 [for RoCM/rdc metrics]
+> - curl localhost:5050 [for ROCm/rdc metrics]
 > - curl localhost:5051/node_health [for node health metrics]
 > 
 > kubectl exec -it <node_health_daemonset_pod> -n aac-monitoring bash

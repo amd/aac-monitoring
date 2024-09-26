@@ -14,10 +14,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-      - aac9.amd.com
+      - '*'
     secretName: nginx-ingress-tls 
   rules:
-  - host: aac9.amd.com 
+  - host: '*' 
     http:
       paths:
       - path: /prometheus(/|$)(.*)

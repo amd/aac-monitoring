@@ -27,6 +27,10 @@ PROMETHEUS_NAMESPACE="aac-monitoring"
 INGRESS_CONTROLLER="ingress-nginx"
 INGRESS_NAMESPACE="ingress-nginx"
 SITE_NAME=""
+prometheus_username=""
+prometheus_password=""
+rocm_rdc_image_tag=""
+storage_class=""
 
 execute_deployment(){
   validate_helm
@@ -58,10 +62,8 @@ execute_deployment(){
     echo "Namespace $PROMETHEUS_NAMESPACE already exists."
   fi
 
-  # Get the NFS Storage Class
-  local storage_class=$(kubectl get sc -o jsonpath='{.items[?(@.provisioner=="nfs-storage")].metadata.name}')
   if [ -n "$storage_class" ]; then
-    sed -i "s/cirrascale-nfs/$storage_class/g" ../k8s-prometheus/kube-prometheus-stack-values.yaml
+    sed -i "s/<storage_class_name>/$storage_class/g" ../k8s-prometheus/kube-prometheus-stack-values.yaml
   fi
   helm upgrade --install ${PROMETHEUS_INSTALLER} prometheus-community/kube-prometheus-stack \
   --values ../k8s-prometheus/kube-prometheus-stack-values.yaml --namespace ${PROMETHEUS_NAMESPACE}
@@ -99,49 +101,35 @@ execute_deployment(){
   #--create-namespace
 
   #kubectl apply -f ./kubernetes/ingress/controller/nginx/manifests/nginx-ingress.${APP_VERSION}.yaml
-
   # Validate presence of nginx-ingress-tls and prometheus-basic-auth secrets
 
   if ! kubectl get secret nginx-ingress-tls --namespace "$PROMETHEUS_NAMESPACE" &> /dev/null; then
-    kubectl create secret tls nginx-ingress-tls --cert=../certs/${SITE_NAME%%.*}-certs/${SITE_NAME}.crt --key=../certs/${SITE_NAME%%.*}-certs/${SITE_NAME%%.*}.key -n $PROMETHEUS_NAMESPACE
+    kubectl create secret tls nginx-ingress-tls --cert=../certs/${SITE_NAME}.crt --key=../certs/${SITE_NAME%%.*}.key -n $PROMETHEUS_NAMESPACE
   fi
   if ! kubectl get secret prometheus-basic-auth --namespace "$PROMETHEUS_NAMESPACE" &> /dev/null; then
     if [ ! -f auth ]; then
       check_htpasswd_installed
-      echo "aac_amd_1234" | htpasswd -c -i auth aac-prometheus
+      echo "$prometheus_password" | htpasswd -c -i auth $prometheus_username
     fi
     kubectl create secret generic prometheus-basic-auth --from-file=auth -n $PROMETHEUS_NAMESPACE
   fi
 
   echo "Waiting for nginx-ingress-controller pod to come up ...."
   sleep 30
-  if [ "$SITE_NAME" = "aac4.amd.com" ]; then
-    kubectl apply -f ../nginx-ingress/charlotte/ingress.yaml
-  else
-    sed -i "s/aac[1-9]\.amd\.com/$SITE_NAME/g" ../nginx-ingress/ingress.yaml
-    kubectl apply -f ../nginx-ingress/ingress.yaml
-  fi
+  sed -i "s/'\*'/'$SITE_NAME'/g" ../nginx-ingress/ingress.yaml
+  kubectl apply -f ../nginx-ingress/ingress.yaml
 
   # Make sure you build the docker image prior to execute the following deployment"
-  SITE_KEY=$(echo $SITE_NAME | cut -d'.' -f1)
-  while IFS='=' read -r key value; do
-    if [ "$SITE_KEY" == "$key" ]; then
-      if [[ "$value" == *"MI300"* ]]; then
-        echo "Container image updated to - rocm_rdc_3.0.0"
-        sed -i 's|image: .*|image: amdaccelcloud/monitoring:rocm_rdc_3.0.0|g' ../k8s-daemonset/rocm-rdc-daemonset.yaml
-      else
-        echo "Container image updated to - rocm_rdc_2.0.0"
-        sed -i 's|image: .*|image: amdaccelcloud/monitoring:rocm_rdc_2.0.0|g' ../k8s-daemonset/rocm-rdc-daemonset.yaml
-      fi
-    fi
-  done < "./sites.ini"
+  sed -i "s|image: .*|image: $rocm_rdc_image_tag|g" ../k8s-daemonset/rocm-rdc-daemonset.yaml
+  echo "Container image updated to - $rocm_rdc_image_tag"
+  
   echo "Starting deployment of rocm-rdc, fluent-bit and node-health stack"
   kubectl apply -f  ../k8s-daemonset
 
   PORT=$(kubectl get svc ingress-nginx-controller -n ingress-nginx | awk '/443:/ {split($5, a, ","); for (i in a) if (a[i] ~ /^443:/) {split(a[i], p, ":"); split(p[2], port, "/"); print port[1];}}')
 
   echo "DEPLOYMENT COMPLETED ....."
-  echo "Promethues URL: https://${SITE_NAME}:${PORT}/prometheus with credentials aac-prometheus|<pswd>"
+  echo "Promethues URL: https://${SITE_NAME}:${PORT}/prometheus with credentials $prometheus_username|$prometheus_password"
 }
 
 execute_undeployment(){
@@ -191,9 +179,13 @@ check_htpasswd_installed() {
 usage(){
   echo ""
   echo "-- Deploy AAC monitoring framework using kube-prometheus-stack and nginx ingress controller --"
-  echo "Usage:$0 -s <site_name> [options] [flags]"
+  echo "Usage:$0 -s <site_name> -u <prometheus_username> -p <prometheus_password> [options] [flags]"
   echo "[OPTIONS]"
-  echo "  -s|--site <site_name> Specify GPU cluster site name (mandatory)"
+  echo "  -s|--site Specify GPU cluster site name (mandatory)"
+  echo "  -i|--image ROCm/RDC docker image tag with repo details (mandatory for deployment)"
+  echo "  -u|--username Specific prometheus enabled basic authentication username, default: aac-prometheus"
+  echo "  -p|--password Specific prometheus enabled basic authentication password, default: aac_1234"
+  echo "  -c|--storageclass Specific stoarge class to provision persistent volume claim for Prometheus TSDB "
   echo "[FLAGS]"
   echo "  --deploy: Install aac monitoring framework and nginx ingress controller using helm"
   echo "  --undeploy: Uninstall aac moitoring framework and nginx ingress controller using helm"
@@ -212,6 +204,22 @@ parse_args(){
     -s|--site)
       shift
       SITE_NAME=$(echo "${1,,}")
+      ;;
+    -i|--image)
+      shift
+      rocm_rdc_image_tag=$(echo "${1,,}")
+      ;;
+    -u|--username)
+      shift
+      prometheus_username=$(echo "${1,,}")
+      ;;
+    -p|--password)
+      shift
+      prometheus_password=$(echo "${1,,}")
+      ;;
+    -c|--storageclass)
+      shift
+      storage_class=$(echo "${1,,}")
       ;;
     --deploy)
       deployment_requested=true
@@ -237,12 +245,42 @@ parse_args(){
     exit 1
   fi
 
+  if [ -z "$storage_class" ]; then
+    echo "Error: Storage class must be provided with -c or --storageclass."
+    usage
+    exit 1
+  fi
+
   if ! $deployment_requested && ! $undeployment_requested; then
     echo "Error: No operation specified. Use --deploy or --undeploy."
     usage
     exit 1
   fi
 
+  if [[ -z "$rocm_rdc_image_tag" && $deployment_requested ]]; then
+    echo "Error: ROCm/RDC Image tag with repository name must be provided with -i or --image."
+    usage
+    exit 1
+  fi
+
+  # Check for certs folder and it's contents
+  if [ -d "../certs" ]; then
+    crtFile=(`find ./certs -maxdepth 1 -name "*.crt"`)
+    keyFile=(`find ./certs -maxdepth 1 -name "*.key"`)
+    if [[ $crtFile -eq 0 || $keyFile -eq 0 ]]; then
+      echo "Error: No TLS certificate or private key found."
+      exit 1
+    fi
+  fi
+
+  if [ -z "$prometheus_username" ]; then
+    prometheus_username="aac-prometheus"
+  fi
+
+  if [ -z "$prometheus_password" ]; then
+    prometheus_password="aac_1234"
+  fi
+  
   if $deployment_requested; then
     execute_deployment
   fi
