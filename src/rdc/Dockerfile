@@ -1,5 +1,5 @@
-# Stage 1: Build Environment
-FROM ubuntu:22.04 as builder
+# rocm-terminal --> rocm-dev --> rocm-libs
+FROM rocm/rocm-terminal:6.2.1
 
 ARG series
 
@@ -11,81 +11,24 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 ENV BUILD_TYPE=RelWithDebInfo
 ENV ROCM_DIR=/opt/rocm
-ENV JOB_NAME=compute-rocm-dkms-no-npi-hipclang
-ENV AMDGPU_REPO_DEB=amdgpu-install-internal_6.3-22.04-1_all.deb
 
-# Set up apt repos and install dependencies
-RUN echo 'Acquire::https { Verify-Peer false; Verify-Host false; }' > /etc/apt/apt.conf.d/99verify-ssl
-RUN apt update -y && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends ca-certificates \
-  gnupg \
-  gpg-agent \
-  software-properties-common && \
-  update-ca-certificates
-
-RUN apt install -y jq \
-  nodejs \
-  wget \
-  curl \
-  python3 \
-  python3-pip \
-  file && \
-  add-apt-repository -y ppa:apt-fast/stable && \
-  apt update -y && \
-  apt install -y apt-fast
-
-RUN rm /etc/apt/apt.conf.d/99verify-ssl
-
-RUN wget "http://artifactory-cdn.amd.com/artifactory/list/amdgpu-deb/$AMDGPU_REPO_DEB" -O /tmp/$AMDGPU_REPO_DEB
-RUN apt-fast install -y "/tmp/$AMDGPU_REPO_DEB"
-
-# Get latest build number
-RUN echo 'Acquire::https { Verify-Peer false; Verify-Host false; }' > /etc/apt/apt.conf.d/99verify-ssl
-RUN curl -Ls "http://rocm-ci.amd.com/job/${JOB_NAME}/lastStableBuild/api/json?depth=1" -o /tmp/build_info.json
-RUN cat /tmp/build_info.json | jq '.actions[] | .buildsByBranchName."refs/remotes/origin/amd-master".buildNumber | select(. != null)' > /tmp/build_num.txt
-RUN BUILD_NUM=$(cat /tmp/build_num.txt) && \
-  # RUN BUILD_NUM=14316 && \
-  echo "BUILD_NUM=$BUILD_NUM" >> "/tmp/.github_env" && \
-  echo "BUILD_NUM=$BUILD_NUM" >> "/tmp/.github_output" && \
-  amdgpu-repo --amdgpu-build=2038746 --rocm-build=$JOB_NAME/$BUILD_NUM && \
-  apt-fast update -y
-
-#RUN amdgpu-repo --amdgpu-build=1788030 --rocm-build=compute-rocm-dkms-no-npi-hipclang/14195
 # Install apt packages
-RUN apt-fast install -y \
-  rocm-core \
-  amd-smi-lib \
-  #rocblas \
-  #rocblas-dev \
-  rocm-developer-tools \
-  rocm-device-libs \
-  rocm-smi-lib \
-  rocprofiler-dev \
-  build-essential \
-  libcap-dev \
-  rdc \
-  kmod
-
-RUN rm /etc/apt/apt.conf.d/99verify-ssl
+RUN apt-get update && apt-get upgrade -y && \
+ DEBIAN_FRONTEND=noninteractive apt-get install -y \
+ amd-smi-lib \
+ rocm-developer-tools \
+ rocm-device-libs \
+ rocm-smi-lib \
+ rocprofiler-dev \
+ libcap-dev \
+ rdc
 
 # Clean up
 RUN apt autoremove && apt clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ---------- Local cleanup for sudo apt update - sudo rm  /etc/apt/sources.list.d/rocm.list
-# Stage 2: Final Environment
-FROM ubuntu:22.04
-
-ARG series
-
-COPY --from=builder /opt /opt
-COPY --from=builder /usr /usr
-COPY --from=builder /etc /etc
-
 RUN apt update -y && apt install -y supervisor && \
   apt autoremove && apt clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-COPY sudo-nopasswd /etc/sudoers.d/sudo-nopasswd
-RUN useradd --create-home -G sudo,video --shell /bin/bash rocm-user
 
 RUN pip install prometheus_client Flask twilio
 COPY rdc_fields_list /usr/src/app/rdc_fields_list

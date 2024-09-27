@@ -27,7 +27,8 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 > - Certs installation location:
 >     - Nginx Ingress Controller TLS enabled through `kubernetes tls secret creation` using ***certs*** folder.
 >     - If TLS requires to be enabled for Grafana, SSL certs needs to be configured in `/etc/grafana/grafana.ini`. ***[optional]***
->     - Nginx Proxy Server acts as reverse proxy for Grafana and SSL certs needs to be configured in `/etc/nginx/sites-avaliable/<site_name>` configuration file and to be placed under ***`/etc/ssl/certs`*** folder.
+>     - __After nginx proxy server installation__ for Grafana, create a site specific configuration at `/etc/nginx/sites-avaliable/<site_name>` and copy the contents of ***monitoring/src/grafana/nginx.conf*** to __<site_name>__. >       ![image](https://github.com/user-attachments/assets/5a941ec3-c9dc-428e-877a-96831d5122a9)
+>     - Nginx Proxy Server SSL certs needs to be placed under ***`/etc/ssl/certs`*** folder.
 >     - Prometheus listens over http behind K8s Nginx ingress controller.
 >     - Grafana listens over http behind NGINX reverse proxy server.
 > - Do not create additional k8s resources, here is the list of [improvements](#automation-improvements) have been incorporated through deployment script automation.
@@ -58,12 +59,12 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
   ```
 ***Deploy `Kube-Prometheus-Stack` and `Nginx-Ingress-Controller` with `fluentbit` `RoCM/rdc` and `node health` as kubernetes daemonset***
 > [!WARNING]
-> The script execution will fail if the followings prerequisites are not fulfilled.
+> __The script execution will fail if the followings prerequisites are not fulfilled.__
 > - Add label `kubernetes.io/role=monitoring` to management or edge node, where monitoring stack needs to be deployed.
 > ```
 > kubectl label nodes <node_name> kubernetes.io/role=monitoring
 > ```
-> - Generate TLS/SSL Certificate for ***kubernetes nginx ingress controller***.
+> - Generate TLS/SSL Certificate for ***kubernetes nginx ingress controller*** if required or use the existing generated certificates.
 > ```
 > #== generate a self-signed certificate ==#
 > openssl req -new -newkey rsa:2048 -nodes -keyout mydomain.key -out mydomain.csr -subj "/C=<CountryName>/ST=<StateOrProvinceName>/L=<Locality>/O=<Organization>/OU=<OrganizationalUnit>/CN=<CommonName>"
@@ -71,10 +72,18 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 > ```
 > - Copy the generated TLS private key and cerificate file under  __certs__ directory.
 > - If using NFS as storage class driver for kubernetes, ensure NFS Server connectivity is established from the edge or management node, as volumes are claimed through PVC for Prometheus TSDB.
+>   ```
+>   Install NFS Client on monitoring node:
+>   sudo apt-get update
+>   sudo apt-get install nfs-common
+>   ```
+> - Update node health daemonset container image tag at `monitoring/src/k8s-daemonset/node_health.yaml` ***image: <repo/image:tag>***
+> - Update the base64-encoded docker repository image pull secret at `monitoring/src/k8s-daemonset/secret.yaml` ***.dockerconfigjson: <secret_here>***
 
 ***Execute the deployment script:***
 * Navigate to the `monitoring/src/helm` folder and execute the following command
 ```
+chmod +x installer.sh
 ./installer.sh -s <site_name> -i <repo/image_tag> -u <prometheus_username> -i <prometheus_password> --deploy|--undeploy`
 ```
   
@@ -84,7 +93,7 @@ The AAC monitoring framework is an easy-to-use framework to monitor data center 
 ***Deploy Grafana***
   * Navigate to the `monitoring/src/grafana` folder.
   * Generate TLS certificate as mentioned [above](#deployment) for Nginx reverse proxy server and keep the cert and private key under /etc/ssl/certs directory as nginx.crt and nginx.key.
-  * Run the shell script: `./setup.sh --install|uninstall`
+  * Run the shell script: `chmod +x setup.sh && ./setup.sh --install|uninstall`
   * Upload dashboard JSON content from the  `monitoring/src/grafana/dashboard/<MI2|3x>` folder based on the GPU hardware information to the Grafana UI.
 
 ### Automation Improvements
