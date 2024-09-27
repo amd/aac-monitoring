@@ -101,6 +101,7 @@ chmod +x installer.sh
     ![image](https://github.com/user-attachments/assets/75847e2f-e82a-4c76-ac45-4f186b567d1e)
 
   * Upload the dashboard JSON content from the `monitoring/src/grafana/dashboard/<MI2x|MI3x>` folder, based on the GPU hardware information, to the Grafana UI.
+  * Update the `datasource uid` and `tag <site>` information with your prometheus datasource and domain information.
 
 ### Automation Improvements
   * Updated RoCM/RDC binary to the latest stable version __6.2.1__.
