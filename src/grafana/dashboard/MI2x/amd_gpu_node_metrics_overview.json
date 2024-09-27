@@ -35,7 +35,7 @@
       "keepTime": true,
       "tags": [
         "amd-gpu",
-        "aac9.amd.com"
+        "<site>"
       ],
       "targetBlank": true,
       "title": "AMD GPU Node Performance Insights",
@@ -2126,7 +2126,7 @@
     "rocm-smi",
     "amd-rocm-rdc",
     "prometheus",
-    "aac9.amd.com"
+    "<site>"
   ],
   "templating": {
     "list": [
