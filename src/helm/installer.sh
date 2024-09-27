@@ -265,10 +265,11 @@ parse_args(){
 
   # Check for certs folder and it's contents
   if [ -d "../certs" ]; then
-    crtFile=(`find ./certs -maxdepth 1 -name "*.crt"`)
-    keyFile=(`find ./certs -maxdepth 1 -name "*.key"`)
+    crtFile=(`find ../certs -maxdepth 1 -name "*.crt" | wc -l`)
+    keyFile=(`find ../certs -maxdepth 1 -name "*.key" | wc -l`)
     if [[ $crtFile -eq 0 || $keyFile -eq 0 ]]; then
       echo "Error: No TLS certificate or private key found."
+      usage
       exit 1
     fi
   fi

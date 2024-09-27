@@ -23,7 +23,7 @@
 
 set -e
 
-install_grafana(){
+install_stack(){
     os=$(lsb_release -d | awk -F ":" '{print$2}')
     echo "Your operating system -$os"
     #
@@ -85,15 +85,14 @@ install_grafana(){
     # Install nginx reverse proxy server
     sudo apt update && sudo apt upgrade -y
     sudo apt install nginx -y
-    sudo cp -R nginx.conf /etc/nginx
     sudo systemctl start nginx
     sudo systemctl enable nginx
-    sudo nginx -s reload
+    #sudo nginx -s reload
     #sudo systemctl status nginx
     echo "Nginx reverse proxy server installation done!"
 }
 
-uninstall_grafana(){
+uninstall_stack(){
     # Uninstall Grafana - 
     sudo systemctl stop grafana-server.service #– Stops the Grafana service.
     sudo apt-get purge grafana #– Removes Grafana and its configuration files.
@@ -134,11 +133,11 @@ parse_args(){
     --install)
       shift
       execution_mode="install"
-      install_grafana
+      install_stack
       ;;
     --uninstall)
       execution_mode="uninstall"
-      uninstall_grafana
+      uninstall_stack
       ;;
     -h|--help)
       usage
