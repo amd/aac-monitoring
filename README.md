@@ -98,7 +98,7 @@ chmod +x installer.sh
   * Run the setup script: `chmod +x setup.sh && ./setup.sh --install|uninstall`
   * Add a new Prometheus data source in the Grafana UI and fill in the fields as shown in the screenshot. Once completed, click "Test" to verify the connectivity.
 
-    ![image](https://github.com/user-attachments/assets/463a1351-a682-4d06-9515-f06b163f3afb)
+    ![image](https://github.com/user-attachments/assets/75847e2f-e82a-4c76-ac45-4f186b567d1e)
 
   * Upload the dashboard JSON content from the `monitoring/src/grafana/dashboard/<MI2x|MI3x>` folder, based on the GPU hardware information, to the Grafana UI.
 
