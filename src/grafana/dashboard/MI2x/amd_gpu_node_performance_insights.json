@@ -896,7 +896,7 @@
     "rocm-smi",
     "amd-gpu",
     "prometheus",
-    "aac9.amd.com"
+    "<site>"
   ],
   "templating": {
     "list": [
