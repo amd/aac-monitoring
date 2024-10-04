@@ -17,7 +17,7 @@ The AAC Monitoring Framework is a user-friendly solution designed to monitor dat
 
 ### Design Workflow:
 
-![image](https://github.com/AMD-Accel-Cloud/AAC/assets/164095873/9f52d85e-faf8-4257-ab72-7128b4d77160)
+![image](src/images/system-design.png)
 
 ### Installation Steps:
 
@@ -29,7 +29,7 @@ The AAC Monitoring Framework is a user-friendly solution designed to monitor dat
 >     - If TLS is required for Grafana, configure SSL certificates in `/etc/grafana/grafana.ini`. __[optional]__
 >     - After installing the Nginx proxy server for Grafana, create a site-specific configuration at `/etc/nginx/sites-available/<site_name>` and copy the contents from `monitoring/src/grafana/nginx.conf` to __<site_name>__.
 >      
->        ![image](https://github.com/user-attachments/assets/5a941ec3-c9dc-428e-877a-96831d5122a9)
+>        ![image](src/images/nginx.png)
 >     - Nginx Proxy Server SSL certificates should be placed in the `/etc/ssl/certs` folder.
 >     - Prometheus listens over HTTP behind the Kubernetes Nginx Ingress Controller.
 >     - Grafana listens over HTTP behind the Nginx reverse proxy server.
@@ -98,7 +98,7 @@ chmod +x installer.sh
   * Run the setup script: `chmod +x setup.sh && ./setup.sh --install|uninstall`
   * Add a new Prometheus data source in the Grafana UI and fill in the fields as shown in the screenshot. Once completed, click "Test" to verify the connectivity.
 
-    ![image](https://github.com/user-attachments/assets/75847e2f-e82a-4c76-ac45-4f186b567d1e)
+    ![image](src/images/prometheus.png)
 
   * Upload the dashboard JSON content from the `monitoring/src/grafana/dashboard/<MI2x|MI3x>` folder, based on the GPU hardware information, to the Grafana UI.
   * Update the `datasource uid` and `tag <site>` information with your prometheus datasource and domain information.
